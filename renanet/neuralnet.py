@@ -99,13 +99,13 @@ class NeuralNet:
                     @ np.diag( self._layers[-1-l-1](data[i]) )
                     )
             db += ( (1/N)
-                   *np.transpose(
-                       multi_dot(
+                   *(psi(self._layers[-1-l](data[i])))
+                   @ np.transpose(
+                       np.diag(self(data[i])-labels[i])
+                       @ multi_dot(
                         [np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k].weights for k in range(l)]
                         , I[-1])
                        )
-                   @ (self(data[i])-labels[i])
-                   *psi(self._layers[-1-l](data[i]))
                    )
         return dw,db
     
