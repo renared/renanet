@@ -14,6 +14,7 @@ from scipy.special import expit as sigmoid
 import uuid
 import scipy.optimize
 import copy
+from time import time
 
 def multi_dot(arr,default):
     if len(arr)==0:
@@ -40,6 +41,9 @@ class NeuralNet:
         # assert type(data) is np.ndarray
         # assert data.shape[1:] == (len(self._layers[0]),)
         return self._layers[-1](data)
+    
+    def __len__(self):
+        return len(self._layers[-1])
     
     def cost(self,data,labels):
         assert type(data)==type(labels)==np.ndarray
@@ -108,24 +112,32 @@ class NeuralNet:
     def learn(self, data, labels, iterations=16):
         assert type(data) is np.ndarray
         assert data.shape[1:] == (len(self._layers[0]),)
-        
-        for iteration in range(iterations):
-            for l in range(len(self._layers)-1):
+        print("Started learning")
+        print("You can Keyboard Interrupt at any moment without messing anything up.")
+        layers = copy.deepcopy(self._layers)
+        st = time()
+        try:
+            for iteration in range(iterations):
+                for l in range(len(self._layers)-1):
+                    # {:.1f}
+                    print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s".format(iteration+1, self.cost(data,labels),time()-st), end="", flush=True)
+                    dw,db = self.grad(data,labels,l)
+                    
+                    def new_cost(step):
+                        shadow = copy.deepcopy(self)
+                        shadow._layers[-1-l].weights = self._layers[-1-l].weights - step*dw
+                        shadow._layers[-1-l].biases = self._layers[-1-l].biases - step*db
+                        E = shadow.cost(data,labels)
+                        del shadow
+                        return E
                 
-                dw,db = self.grad(data,labels,l)
-                
-                def new_cost(step):
-                    shadow = copy.deepcopy(self)
-                    shadow._layers[-1-l].weights = self._layers[-1-l].weights - step*dw
-                    shadow._layers[-1-l].biases = self._layers[-1-l].biases - step*db
-                    E = shadow.cost(data,labels)
-                    del shadow
-                    return E
-            
-                res = scipy.optimize.minimize_scalar(new_cost)
-                step = res.x
-                self._layers[-1-l].weights = self._layers[-1-l].weights - step*dw
-                self._layers[-1-l].biases = self._layers[-1-l].biases - step*db
+                    res = scipy.optimize.minimize_scalar(new_cost)
+                    step = res.x
+                    self._layers[-1-l].weights = self._layers[-1-l].weights - step*dw
+                    self._layers[-1-l].biases = self._layers[-1-l].biases - step*db
+                layers = copy.deepcopy(self._layers)
+        except KeyboardInterrupt:
+            self._layers = layers
                 
         
     def save(self,filename):

@@ -127,43 +127,6 @@ def chargerFichiersManuscrits(formatFichiers, limit=0):
     return np.concatenate(all_X), np.concatenate(all_C)
 
 
-# def test2D(couche,fichierTest,nomColonneX='dataTest',nomColonneC='cTest',output_neurons=1):
-#     '''
-#     Test the neural net with test data in a .mat file
-
-#     Parameters
-#     ----------
-#     couche : neuralnet.layer.Layer
-#         output layer of neural net.
-#     fichierTest : str
-#         filename.
-#     nomColonneX : str, optional
-#         Name of the column corresponding to the data. The default is 'dataTest'.
-#     nomColonneC : TYPE, optional
-#         Name of the column corresponding to the expected output of neural net. The default is 'cTest'.
-#     output_neurons : int, optional
-#         Number of neurons in the output layer. The default is 1.
-        
-#     Returns
-#     -------
-#     X_test : tensor
-#         data, shape (n,2,1).
-#     C_test : numpy.ndarray
-#         expected output of the neural net, shape (n, output_neurons).
-#     n_succes : int
-#         number of successful predictions.
-
-#     '''
-#     X_test, C_test = lectureMat2D(fichierTest,nomColonneX=nomColonneX,nomColonneC=nomColonneC,output_neurons=output_neurons)
-#     n_succes = 0
-#     threshold = lambda x: 0 if x<0.5 else 1 # simple fonction qui aplatit la sigmoide sur l'axe des ordonnées
-#     res = couche(X_test)
-#     for i in range(len(res)):
-#         if threshold(res[i][0]) == C_test[i]:
-#             n_succes += 1
-#     print(n_succes, "succès sur", len(X_test), "données.")
-#     return X_test, C_test, n_succes
-
 def test(couche, X_test, C_test, mode='strict'):
     '''
     Test the neural net with test data and the expected output, and prints the success rate.

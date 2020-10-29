@@ -31,7 +31,7 @@ def graph_2d_classes(output_layer, bounds=(0.0, 1.0, 0.0, 1.0), step=0.1, fig=-1
     -------
     plotted image and colors.
     '''
-    assert type(output_layer) == renanet.layer.Layer
+    #assert type(output_layer) == renanet.layer.Layer
     #assert que la couche d'entrée prend un tenseur de taille (n,2,1)
     
     colors = np.array([
@@ -42,7 +42,7 @@ def graph_2d_classes(output_layer, bounds=(0.0, 1.0, 0.0, 1.0), step=0.1, fig=-1
     y = np.arange(bounds[2], bounds[3], step)
     xyi = np.array([(i, j) for i in range(len(x)) for j in range(len(y))])
     xy = np.array([(x[i], y[j]) for i, j in xyi])
-    data = xy.reshape(*xy.shape, 1)
+    data = xy.reshape(*xy.shape)
 
     output = output_layer(data)
     Z = output.reshape(len(x), len(y), len(output_layer))
@@ -102,7 +102,6 @@ def graph_2d_entry(tensor, classes, colors, fig=-1):
     None.
     '''
     assert len(tensor) > 0
-    assert tensor[0].shape == (2, 1)
     assert len(tensor) == len(classes)
     assert len(colors) == classes.shape[1] + 1
     plt.figure(fig if fig >= 0 else None)

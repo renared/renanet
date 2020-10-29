@@ -19,8 +19,8 @@ class Layer:
             pass
         else :
             m = len(parent)
-            self.weights = np.random.randn(n,m)   # poids des neurones de la couche : à prendre en compte par la couche suivante
-            self.biases = np.random.randn(n) # biais des neurones : pour la couche suivante...
+            self.weights = np.random.randn(n,m)
+            self.biases = np.random.randn(n) 
             
     def __call__(self, data):
         assert type(data) is np.ndarray
