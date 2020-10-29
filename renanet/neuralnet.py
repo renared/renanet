@@ -13,8 +13,7 @@ from . import layer
 from scipy.special import expit as sigmoid
 import uuid
 import scipy.optimize
-import os
-import matplotlib.pyplot as plt
+import copy
 
 def multi_dot(arr,default):
     if len(arr)==0:
@@ -109,53 +108,25 @@ class NeuralNet:
     def learn(self, data, labels, iterations=16):
         assert type(data) is np.ndarray
         assert data.shape[1:] == (len(self._layers[0]),)
-        tmp = uuid.uuid4().hex+".npy"
-        
-            
         
         for iteration in range(iterations):
             for l in range(len(self._layers)-1):
                 
                 dw,db = self.grad(data,labels,l)
-                E = [self.cost(data,labels)]
                 
                 def new_cost(step):
-                    self.save(tmp)
-                    self._layers[-1-l].weights = self._layers[-1-l].weights - step*dw
-                    self._layers[-1-l].biases = self._layers[-1-l].biases - step*db
-                    E = self.cost(data,labels)
-                    self.load(tmp)
+                    shadow = copy.deepcopy(self)
+                    shadow._layers[-1-l].weights = self._layers[-1-l].weights - step*dw
+                    shadow._layers[-1-l].biases = self._layers[-1-l].biases - step*db
+                    E = shadow.cost(data,labels)
+                    del shadow
                     return E
-                
-                ## find optimal step
-                step = 0.1
-                steps = [step]
-                for j in range(64):
-                    plt.scatter(np.log10(step), np.log10(E[-1]))
-                    plt.draw()
-                    plt.pause(0.02)
-                    steps.append(step)
-                    E.append(new_cost(step))
-                    if E[-1]<E[-2] :
-                        step *= 2
-                    else:
-                        step /= 2
-                    if step==0:
-                        break
-                step = steps[np.argmin(E)]
-                plt.scatter(np.log10(step), np.log10(np.min(E)), s=100)
-                plt.pause(1)
-                plt.close()
-                
-                # res = scipy.optimize.minimize_scalar(new_cost)
-                # step = res.x
+            
+                res = scipy.optimize.minimize_scalar(new_cost)
+                step = res.x
                 self._layers[-1-l].weights = self._layers[-1-l].weights - step*dw
                 self._layers[-1-l].biases = self._layers[-1-l].biases - step*db
                 
-        try:
-            os.remove(tmp)
-        except:
-            pass
         
     def save(self,filename):
         arr = []
