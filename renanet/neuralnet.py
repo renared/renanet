@@ -109,7 +109,7 @@ class NeuralNet:
                    )
         return dw,db
     
-    def learn(self, data, labels, iterations=16):
+    def learn(self, data, labels, iterations=1000000):
         assert type(data) is np.ndarray
         assert data.shape[1:] == (len(self._layers[0]),)
         print("Started learning")
@@ -124,11 +124,11 @@ class NeuralNet:
                     dw,db = self.grad(data,labels,l)
                     
                     def new_cost(step):
-                        shadow = copy.deepcopy(self)
-                        shadow._layers[-1-l].weights = self._layers[-1-l].weights - step*dw
-                        shadow._layers[-1-l].biases = self._layers[-1-l].biases - step*db
-                        E = shadow.cost(data,labels)
-                        del shadow
+                        shadow = copy.deepcopy(self._layers)
+                        self._layers[-1-l].weights = self._layers[-1-l].weights - step*dw
+                        self._layers[-1-l].biases = self._layers[-1-l].biases - step*db
+                        E = self.cost(data,labels)
+                        self._layers = shadow
                         return E
                 
                     res = scipy.optimize.minimize_scalar(new_cost)

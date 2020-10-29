@@ -46,7 +46,7 @@ class Layer:
         if self._parent == None:
             return self
         return self._parent.getInputLayer()
-
+    
     
 
         
