@@ -11,6 +11,7 @@ import numpy as np
 
 from . import layer
 from scipy.special import expit as sigmoid
+import uuid
 
 def multi_dot(arr,default):
     if len(arr)==0:
@@ -106,14 +107,31 @@ class NeuralNet:
         assert type(data) is np.ndarray
         assert data.shape[1:] == (len(self._layers[0]),)
         
+        def optimal_step():
+            tmp = uuid.uuid4().hex
+            self.save(tmp)
+        
         for iteration in range(iterations):
             for l in range(len(self._layers)-1):
                 dw,db = self.grad(data,labels,l)
                 self._layers[-1-l].weights = self._layers[-1-l].weights - 0.1*dw
                 self._layers[-1-l].biases = self._layers[-1-l].biases - 0.1*db
         
-    def save(self):
-        pass
+    def save(self,filename):
+        arr = []
+        for i in range(1,len(self._layers)):
+            arr.append(self._layers[i].weights)
+            arr.append(self._layers[i].biases)
+        np.save(filename,arr)
     
-    def load(self):
-        pass
+    def load(self,filename):
+        arr = np.load(filename,allow_pickle=True)
+        if len(arr)!=2*(len(self._layers)-1):
+            raise Exception("Saved renanet doesn't match dimensions.")
+        for i in range(1,len(self._layers)):
+            if (self._layers[i].weights.shape != arr[2*(i-1)].shape
+                or self._layers[i].biases.shape != arr[2*(i-1)+1].shape ):
+                raise Exception("Can't load saved net: the saved layers don't have the same shapes as the net's layers.")
+        for i in range(len(self._layers)):
+            self._layers[i].weights = arr[2*(i-1)]
+            self._layers[i].biases = arr[2*(i-1)+1]
