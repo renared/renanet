@@ -11,7 +11,13 @@ import numpy as np
 
 from . import layer
 from scipy.special import expit as sigmoid
-from numpy.linalg import multi_dot
+
+def multi_dot(arr,default):
+    if len(arr)==0:
+        return np.eye(default)
+    if len(arr)==1:
+        return arr[0]
+    return np.linalg.multi_dot(arr)
 
 def psi(x):
     return sigmoid(x)*(1-sigmoid(x))
@@ -63,17 +69,28 @@ class NeuralNet:
         dw = np.zeros(self._layers[-l].weights.shape)
         db = np.zeros(self._layers[-l].biases.shape)
         for i in range(N):
+            # a = (1/N)*np.diag(psi(self._layers[-l](data[i]))) 
+            # b = np.ones( (I[-1-l],I[-1]) )
+            # c = b @ np.diag(self(data[i])-labels[i])
+            # d = multi_dot([np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k].weights for k in range(l-1)]
+            #               ,I[-1])
+            # e = np.transpose(c @ d)
+            # print(a.shape, e.shape)
+            # f = a @ e
+            # g = f @ np.diag(self._layers[-1-l](data[i]))
+            # dw += g
+            
             dw += ( (1/N)
-                   *np.diag(psi(self(data[i])))
-                   @ np.transpose( 
-                       np.ones((I[-1-l],I[-1]))
-                       @ np.diag(self(data[i])-labels[i])
-                       @ ( multi_dot([
-                           *[np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k-1].weights for k in range(l-1)]
-                           ]) if l>1 else np.eye(I[-1]) )
-                       )
-                   @ np.diag( self._layers[-1-l](data[i]) )
-                   )
+                    *np.diag(psi(self._layers[-l](data[i])))
+                    @ np.transpose( 
+                        np.ones((I[-1-l],I[-1]))
+                        @ np.diag(self(data[i])-labels[i])
+                        @ multi_dot(
+                            [np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k].weights for k in range(l-1)]
+                            ,I[-1] ) 
+                        )
+                    @ np.diag( self._layers[-1-l](data[i]) )
+                    )
         return dw,db
     
     def learn(self, data, labels, iterations=16):
