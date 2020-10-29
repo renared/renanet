@@ -108,8 +108,9 @@ class NeuralNet:
         
         for iteration in range(iterations):
             for l in range(len(self._layers)-1):
-                #print(l)
-                self._layers[-1-l].weights = self._layers[-1-l].weights - 0.1*self.grad(data,labels,l)[0]
+                dw,db = self.grad(data,labels,l)
+                self._layers[-1-l].weights = self._layers[-1-l].weights - 0.1*dw
+                self._layers[-1-l].biases = self._layers[-1-l].biases - 0.1*db
         
     def save(self):
         pass
