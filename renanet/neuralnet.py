@@ -62,12 +62,12 @@ class NeuralNet:
     
     def grad(self, data, labels, l):
         #print("la couche demandée a",len(self._layers[-1-l]),"neurones")
-        assert 1<=l<len(self._layers)
+        assert 0<=l<len(self._layers)-1
         N = len(data)
         L = len(self._layers)
         I = [len(self._layers[i]) for i in range(L)]
-        dw = np.zeros(self._layers[-l].weights.shape)
-        db = np.zeros(self._layers[-l].biases.shape)
+        dw = np.zeros(self._layers[-l-1].weights.shape)
+        db = np.zeros(self._layers[-l-1].biases.shape)
         for i in range(N):
             # a = (1/N)*np.diag(psi(self._layers[-l](data[i]))) 
             # b = np.ones( (I[-1-l],I[-1]) )
@@ -81,16 +81,25 @@ class NeuralNet:
             # dw += g
             
             dw += ( (1/N)
-                    *np.diag(psi(self._layers[-l](data[i])))
+                    *np.diag(psi(self._layers[-l-1](data[i])))
                     @ np.transpose( 
-                        np.ones((I[-1-l],I[-1]))
+                        np.ones((I[-1-l-1],I[-1]))
                         @ np.diag(self(data[i])-labels[i])
                         @ multi_dot(
-                            [np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k].weights for k in range(l-1)]
+                            [np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k].weights for k in range(l)]
                             ,I[-1] ) 
                         )
-                    @ np.diag( self._layers[-1-l](data[i]) )
+                    @ np.diag( self._layers[-1-l-1](data[i]) )
                     )
+            db += ( (1/N)
+                   *np.transpose(
+                       multi_dot(
+                        [np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k].weights for k in range(l)]
+                        , I[-1])
+                       )
+                   @ (self(data[i])-labels[i])
+                   *psi(self._layers[-1-l](data[i]))
+                   )
         return dw,db
     
     def learn(self, data, labels, iterations=16):
@@ -100,7 +109,7 @@ class NeuralNet:
         for iteration in range(iterations):
             for l in range(len(self._layers)-1):
                 #print(l)
-                self._layers[-1-l].weights = self._layers[-1-l].weights - 0.1*self.grad(data,labels,l+1)[0]
+                self._layers[-1-l].weights = self._layers[-1-l].weights - 0.1*self.grad(data,labels,l)[0]
         
     def save(self):
         pass
