@@ -16,6 +16,7 @@ import scipy.optimize
 import copy
 from time import time
 import joblib
+import collections
 
 def mult_rows(A,b):
     return (A.T*b).T
@@ -127,8 +128,23 @@ class NeuralNet:
         layers = copy.deepcopy(self._layers)
         st = time()
         try:
+            Xdw,Xdb = collections.deque(maxlen=2),collections.deque(maxlen=2)
+            Ydw,Ydb = collections.deque(maxlen=1),collections.deque(maxlen=1)
+            w,b=self.get_values()
+            Xdw.append(w)
+            Xdb.append(b)
+            Ydw.append(w)
+            Ydb.append(b)
             for iteration in range(iterations):
                 cost_msg = self.cost(data,labels)
+                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; setting up momentum".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
+                
+                ydw = []
+                ydb = []
+                for k in range(len(Ydw[-1])):
+                    ydw.append( Xdw[-1][k] + (iteration)/(iteration+3)*(Xdw[-1][k]-Xdw[-2][k]) if iteration>0 else Xdw[-1][k])
+                    ydb.append( Xdb[-1][k] + (iteration)/(iteration+3)*(Xdb[-1][k]-Xdb[-2][k]) if iteration>0 else Xdb[-1][k])
+                self.set_values(ydw,ydb)
                 print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing gradient".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
                 dw,db = self.grad(data,labels)
                 
@@ -151,6 +167,11 @@ class NeuralNet:
                 print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; finishing, step: {:.2e}".format(iteration+1, cost_msg,time()-st, step)+32*" ", end="", flush=True)
                 self.step_grad_descent(dw, db, step)
                 layers = copy.deepcopy(self._layers)
+                Ydw.append(ydw)
+                Ydb.append(ydb)
+                xdw,xdb = self.get_values()
+                Xdw.append(xdw)
+                Xdb.append(xdb)
                 
         except KeyboardInterrupt:
             print("")
@@ -186,6 +207,20 @@ class NeuralNet:
         except KeyboardInterrupt:
             self._layers = layers
                 
+    def set_values(self,w,b):
+        assert len(w)==len(b)==len(self._layers)-1
+        for k in range(len(w)):
+            self._layers[1+k].weights = w[k]
+            self._layers[1+k].biases = b[k]
+            
+    def get_values(self):
+        w=[]
+        b=[]
+        for k in range(len(self._layers)-1):
+            w.append(self._layers[1+k].weights)
+            b.append(self._layers[1+k].biases)
+        return w,b
+    
     def step_grad_descent(self,dw,db,step):
         assert len(dw)==len(db)==len(self._layers)-1
         for k in range(len(dw)):
