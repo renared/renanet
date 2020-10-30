@@ -15,6 +15,7 @@ import uuid
 import scipy.optimize
 import copy
 from time import time
+import joblib
 
 def mult_rows(A,b):
     return (A.T*b).T
@@ -127,9 +128,11 @@ class NeuralNet:
         st = time()
         try:
             for iteration in range(iterations):
-                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s".format(iteration+1, self.cost(data,labels),time()-st), end="", flush=True)
+                cost_msg = self.cost(data,labels)
+                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing gradient".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
                 dw,db = self.grad(data,labels)
                 
+                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing optimal step".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
                 def new_cost(step):
                     shadow = copy.deepcopy(self)
                     for k in range(len(dw)):
@@ -139,13 +142,20 @@ class NeuralNet:
                     del shadow
                     return E
             
-                res = scipy.optimize.minimize_scalar(new_cost,method='brent',options={'maxiter':2})
+                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing optimal step - part 1".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)    
+                res = scipy.optimize.minimize_scalar(new_cost,bounds=(0.01,1E10),method='bounded',options={'maxiter':100})
                 step = res.x
-                E = [new_cost(step*2**k) for k in range(-15,16)]
-                step = step*2**(np.argmin(E)-15)
-                res = scipy.optimize.minimize_scalar(new_cost,bounds=(step/2,step*2),method='bounded',options={'maxiter':6})
-                step=res.x
+                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing optimal step - part 2, step: {:.2e}".format(iteration+1, cost_msg,time()-st, step)+32*" ", end="", flush=True)
+                E = [new_cost(step*2**k) for k in range(0,32)]
+                # test_cost_pow_2 = lambda k : new_cost(step*2**k)
+                # E = joblib.Parallel(n_jobs=-1)(joblib.delayed(test_cost_pow_2)(k) for k in range(-15,16))
+                step = step*2**(np.argmin(E))
+                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing optimal step - part 3, step: {:.2e}".format(iteration+1, cost_msg,time()-st, step)+32*" ", end="", flush=True)
+                if step/2>0 :
+                    res = scipy.optimize.minimize_scalar(new_cost,bounds=(step/2,step*2),method='bounded',options={'maxiter':2})
+                    step=res.x
                 
+                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; finishing, step: {:.2e}".format(iteration+1, cost_msg,time()-st, step)+32*" ", end="", flush=True)
                 for k in range(len(dw)):
                     self._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
                     self._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
