@@ -131,12 +131,12 @@ class NeuralNet:
                 dw,db = self.grad(data,labels)
                 
                 def new_cost(step):
-                    shadow = copy.deepcopy(self._layers)
+                    shadow = copy.deepcopy(self)
                     for k in range(len(dw)):
-                        self._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
-                        self._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
-                    E = self.cost(data,labels)
-                    self._layers = shadow
+                        shadow._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
+                        shadow._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
+                    E = shadow.cost(data,labels)
+                    del shadow
                     return E
             
                 res = scipy.optimize.minimize_scalar(new_cost)

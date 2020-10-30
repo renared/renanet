@@ -124,7 +124,10 @@ def chargerFichiersManuscrits(formatFichiers, limit=0):
         Ci[:, digit] = np.ones(len(Xi))
         all_X.append(Xi)
         all_C.append(Ci)
-    return np.concatenate(all_X), np.concatenate(all_C)
+    X = np.concatenate(all_X)
+    X = X.reshape(len(X),-1)
+    C = np.concatenate(all_C)
+    return X,C
 
 
 def test(couche, X_test, C_test, mode='strict'):
