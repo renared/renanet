@@ -79,17 +79,6 @@ class NeuralNet:
         dw = np.zeros(self._layers[-l-1].weights.shape)
         db = np.zeros(self._layers[-l-1].biases.shape)
         for i in range(N):
-            # a = (1/N)*np.diag(psi(self._layers[-l](data[i]))) 
-            # b = np.ones( (I[-1-l],I[-1]) )
-            # c = b @ np.diag(self(data[i])-labels[i])
-            # d = multi_dot([np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k].weights for k in range(l-1)]
-            #               ,I[-1])
-            # e = np.transpose(c @ d)
-            # print(a.shape, e.shape)
-            # f = a @ e
-            # g = f @ np.diag(self._layers[-1-l](data[i]))
-            # dw += g
-            
             dw += ( (1/N)
                     *mult_rows(
                         np.transpose( 
@@ -105,7 +94,7 @@ class NeuralNet:
             db += ( (1/N)
                    *np.transpose(
                        multi_dot(
-                        [np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k].weights for k in range(l)]
+                        [ mult_rows(self._layers[-1-k].weights, psi(self._layers[-1-k](data[i]))) for k in range(l)]
                         , I[-1])
                        )
                    @ (self(data[i])-labels[i])
