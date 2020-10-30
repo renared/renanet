@@ -124,10 +124,41 @@ class NeuralNet:
         st = time()
         try:
             for iteration in range(iterations):
+                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s".format(iteration+1, self.cost(data,labels),time()-st), end="", flush=True)
+                dw,db = self.grad(data,labels)
+                
+                def new_cost(step):
+                    shadow = copy.deepcopy(self._layers)
+                    for k in range(len(dw)):
+                        self._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
+                        self._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
+                    E = self.cost(data,labels)
+                    self._layers = shadow
+                    return E
+            
+                res = scipy.optimize.minimize_scalar(new_cost)
+                step = res.x
+                for k in range(len(dw)):
+                    self._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
+                    self._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
+                layers = copy.deepcopy(self._layers)
+                
+        except KeyboardInterrupt:
+            self._layers = layers
+    
+    def learn_old(self, data, labels, iterations=1000000):
+        assert type(data) is np.ndarray
+        assert data.shape[1:] == (len(self._layers[0]),)
+        print("Started learning")
+        print("You can Keyboard Interrupt at any moment without messing anything up.")
+        layers = copy.deepcopy(self._layers)
+        st = time()
+        try:
+            for iteration in range(iterations):
                 for l in range(len(self._layers)-1):
                     # {:.1f}
                     print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s".format(iteration+1, self.cost(data,labels),time()-st), end="", flush=True)
-                    dw,db = self.grad(data,labels,l)
+                    dw,db = self.grad_l(data,labels,l)
                     
                     def new_cost(step):
                         shadow = copy.deepcopy(self._layers)
