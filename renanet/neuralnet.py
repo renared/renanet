@@ -16,6 +16,9 @@ import scipy.optimize
 import copy
 from time import time
 
+def mult_rows(A,b):
+    return (A.T*b).T
+
 def multi_dot(arr,default):
     if len(arr)==0:
         return np.eye(default)
@@ -88,15 +91,16 @@ class NeuralNet:
             # dw += g
             
             dw += ( (1/N)
-                    *np.diag(psi(self._layers[-l-1](data[i])))
-                    @ np.transpose( 
-                        np.ones((I[-1-l-1],I[-1]))
-                        @ np.diag(self(data[i])-labels[i])
-                        @ multi_dot(
-                            [np.diag(psi(self._layers[-1-k](data[i]))) @ self._layers[-1-k].weights for k in range(l)]
-                            ,I[-1] ) 
-                        )
-                    @ np.diag( self._layers[-1-l-1](data[i]) )
+                    *mult_rows(
+                        np.transpose( 
+                            mult_rows(
+                                multi_dot(
+                                    [ mult_rows(self._layers[-1-k].weights, psi(self._layers[-1-k](data[i]))) for k in range(l)]
+                                    ,I[-1] ) 
+                                , self(data[i])-labels[i] )
+                            )
+                        , psi(self._layers[-l-1](data[i])) )
+                    @ np.tile( self._layers[-1-l-1](data[i]) , (I[-1],1) )
                     )
             db += ( (1/N)
                    *np.transpose(
