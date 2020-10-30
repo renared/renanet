@@ -135,9 +135,7 @@ class NeuralNet:
                 print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing optimal step".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
                 def new_cost(step):
                     shadow = copy.deepcopy(self)
-                    for k in range(len(dw)):
-                        shadow._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
-                        shadow._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
+                    shadow.step_grad_descent(dw, db, step)
                     E = shadow.cost(data,labels)
                     del shadow
                     return E
@@ -151,9 +149,7 @@ class NeuralNet:
                     step = res.x
                 
                 print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; finishing, step: {:.2e}".format(iteration+1, cost_msg,time()-st, step)+32*" ", end="", flush=True)
-                for k in range(len(dw)):
-                    self._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
-                    self._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
+                self.step_grad_descent(dw, db, step)
                 layers = copy.deepcopy(self._layers)
                 
         except KeyboardInterrupt:
@@ -190,6 +186,11 @@ class NeuralNet:
         except KeyboardInterrupt:
             self._layers = layers
                 
+    def step_grad_descent(self,dw,db,step):
+        assert len(dw)==len(db)==len(self._layers)-1
+        for k in range(len(dw)):
+            self._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
+            self._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
         
     def save(self,filename):
         arr = []
