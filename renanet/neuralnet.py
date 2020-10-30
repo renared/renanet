@@ -62,10 +62,13 @@ class NeuralNet:
         I = [len(self._layers[i]) for i in range(L)]
         dw = [np.zeros(self._layers[o].weights.shape) for o in range(1,L)]
         db = [np.zeros(self._layers[o].biases.shape) for o in range(1,L)]
+        y = [np.zeros(len(self._layers[o])) for o in range(L)]
         for i in range(N):
-            y_err = (self(data[i])-labels[i])
+            y[-1] = self(data[i])
+            y_err = y[-1]-labels[i]
             magic = np.eye(I[-1])
             for l in range(L-1):
+                y[-1-l-1] = self._layers[-1-l-1](data[i])
                 if l>=1:
                     magic = magic @ mult_rows(self._layers[-l].weights, psi(self._layers[-l](data[i])))
                 dw[-1-l] += ( (1/N)
@@ -73,13 +76,13 @@ class NeuralNet:
                                     np.transpose(
                                         mult_rows(magic, y_err)
                                         )
-                                    , psi(self._layers[-l-1](data[i])) )
-                                @ np.tile( self._layers[-1-l-1](data[i]) , (I[-1],1) )
+                                    , psi(y[-l-1]) )
+                                @ np.tile( y[-1-l-1] , (I[-1],1) )
                             )
                 db[-1-l] += ( (1/N)
                                * magic.T
                                @ y_err
-                               *psi(self._layers[-1-l](data[i]))
+                               *psi(y[-1-l])
                              )
         return dw,db
     

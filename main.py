@@ -10,7 +10,7 @@ import numpy as np
 import graph
 import utility
 
-rena = renanet.NeuralNet(2,10,10,10,1)
+rena = renanet.NeuralNet(2,100,1)
 
 X = np.array([[0,0.2],[1.72,0.32],[0.98,1.26],[-2,1],[-0.68,2.58],
               [-1.76,-0.74],[1.02,-1.52],[-0.34,-2.76],[0,-1],[-3.06,-0.32]])
