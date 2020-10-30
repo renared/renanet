@@ -130,18 +130,22 @@ class NeuralNet:
                 print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s".format(iteration+1, self.cost(data,labels),time()-st), end="", flush=True)
                 dw,db = self.grad(data,labels)
                 
-                # def new_cost(step):
-                #     shadow = copy.deepcopy(self)
-                #     for k in range(len(dw)):
-                #         shadow._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
-                #         shadow._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
-                #     E = shadow.cost(data,labels)
-                #     del shadow
-                #     return E
+                def new_cost(step):
+                    shadow = copy.deepcopy(self)
+                    for k in range(len(dw)):
+                        shadow._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
+                        shadow._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
+                    E = shadow.cost(data,labels)
+                    del shadow
+                    return E
             
-                # res = scipy.optimize.minimize_scalar(new_cost)
-                # step = res.x
-                step=0.7
+                res = scipy.optimize.minimize_scalar(new_cost,method='brent',options={'maxiter':2})
+                step = res.x
+                E = [new_cost(step*2**k) for k in range(-15,16)]
+                step = step*2**(np.argmin(E)-15)
+                res = scipy.optimize.minimize_scalar(new_cost,bounds=(step/2,step*2),method='bounded',options={'maxiter':6})
+                step=res.x
+                
                 for k in range(len(dw)):
                     self._layers[1+k].weights = self._layers[1+k].weights - step*dw[k]
                     self._layers[1+k].biases = self._layers[1+k].biases - step*db[k]
