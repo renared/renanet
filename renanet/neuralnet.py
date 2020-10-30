@@ -55,22 +55,35 @@ class NeuralNet:
         assert labels.shape[1:] == (len(self._layers[-1]),)
         return np.sum( (self(data) - labels)**2 )/len(data)/2
     
-    # def grad(self,data,labels):
-    #     psi = lambda x : sigmoid(x)*(1-sigmoid(x))
-    #     ylLx = self(data)
-    #     ylL1x = self._layers[-2](data)
-    #     #return (1/len(data))*self._layers[-1].grad(data,labels)
-    #     dw=0
-    #     for i in range(len(data)):
-    #         dw += np.diag(ylLx[i]-labels[i]).dot(np.diag(psi(ylLx[i]))).dot(np.ones((len(ylLx[i]),len(ylL1x[i])))).dot(np.diag(ylL1x[i]))
-    #     dw /= len(data)
-    #     db=0
-    #     for i in range(len(data)):
-    #         db += (ylLx[i]-labels[i])*psi(ylLx[i])
-    #     db /= len(data)
-    #     return dw,db
     
-    def grad(self, data, labels, l):
+    def grad(self, data, labels):
+        N = len(data)
+        L = len(self._layers)
+        I = [len(self._layers[i]) for i in range(L)]
+        dw = [np.zeros(self._layers[o].weights.shape) for o in range(1,L)]
+        db = [np.zeros(self._layers[o].biases.shape) for o in range(1,L)]
+        for i in range(N):
+            y_err = (self(data[i])-labels[i])
+            magic = np.eye(I[-1])
+            for l in range(L-1):
+                if l>=1:
+                    magic = magic @ mult_rows(self._layers[-l].weights, psi(self._layers[-l](data[i])))
+                dw[-1-l] += ( (1/N)
+                                *mult_rows(
+                                    np.transpose(
+                                        mult_rows(magic, y_err)
+                                        )
+                                    , psi(self._layers[-l-1](data[i])) )
+                                @ np.tile( self._layers[-1-l-1](data[i]) , (I[-1],1) )
+                            )
+                db[-1-l] += ( (1/N)
+                               * magic.T
+                               @ y_err
+                               *psi(self._layers[-1-l](data[i]))
+                             )
+        return dw,db
+    
+    def grad_l(self, data, labels, l):
         #print("la couche demandée a",len(self._layers[-1-l]),"neurones")
         assert 0<=l<len(self._layers)-1
         N = len(data)
