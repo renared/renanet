@@ -15,6 +15,7 @@ rena = renanet.NeuralNet(400,40,10)
 X,C = utility.chargerFichiersManuscrits(r'D:\Yann\Desktop\bourdinyrichrobi\data_chamilo\Data\DigitTrain_%d.mat')
 X_test,C_test = utility.chargerFichiersManuscrits(r'D:\Yann\Desktop\bourdinyrichrobi\data_chamilo\Data\DigitTest_%d.mat')
 
+rena.load("ch.npy")
 rena.learn(X,C)
 
 utility.test(rena,X_test,C_test,mode='max')

@@ -121,12 +121,14 @@ class NeuralNet:
         return dw,db
     
     def learn(self, data, labels, iterations=1000000):
+        ## à coder : mémoire de la meilleure erreur et valeurs
         assert type(data) is np.ndarray
         assert data.shape[1:] == (len(self._layers[0]),)
         print("Started learning")
         print("You can Keyboard Interrupt at any moment without messing anything up.")
         layers = copy.deepcopy(self._layers)
         st = time()
+        best_E = float("+inf")
         try:
             Xdw,Xdb = collections.deque(maxlen=2),collections.deque(maxlen=2)
             Ydw,Ydb = collections.deque(maxlen=1),collections.deque(maxlen=1)
@@ -135,15 +137,19 @@ class NeuralNet:
             Xdb.append(b)
             Ydw.append(w)
             Ydb.append(b)
+            layers = []
             for iteration in range(iterations):
                 cost_msg = self.cost(data,labels)
+                if cost_msg<=best_E:
+                    best_E=cost_msg
+                    layers = copy.deepcopy(self._layers)
                 print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; setting up momentum".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
                 
                 ydw = []
                 ydb = []
                 for k in range(len(Ydw[-1])):
-                    ydw.append( Xdw[-1][k] + (iteration)/(iteration+3)*(Xdw[-1][k]-Xdw[-2][k]) if iteration>0 else Xdw[-1][k])
-                    ydb.append( Xdb[-1][k] + (iteration)/(iteration+3)*(Xdb[-1][k]-Xdb[-2][k]) if iteration>0 else Xdb[-1][k])
+                    ydw.append( Xdw[-1][k] + .8*(iteration)/(iteration+3)*(Xdw[-1][k]-Xdw[-2][k]) if iteration>0 else Xdw[-1][k])
+                    ydb.append( Xdb[-1][k] + .8*(iteration)/(iteration+3)*(Xdb[-1][k]-Xdb[-2][k]) if iteration>0 else Xdb[-1][k])
                 self.set_values(ydw,ydb)
                 print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing gradient".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
                 dw,db = self.grad(data,labels)
@@ -161,12 +167,11 @@ class NeuralNet:
                 step = res.x
                 if step<=0:
                     print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; optimal step is negative, step: {:.2e}".format(iteration+1, cost_msg,time()-st, step)+32*" ", end="", flush=True)
-                    res = scipy.optimize.minimize_scalar(new_cost,bounds=(0,1),method='bounded',options={'maxiter':8})
+                    res = scipy.optimize.minimize_scalar(new_cost,bounds=(0,1),method='bounded',options={'maxiter':32})
                     step = res.x
                 
                 print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; finishing, step: {:.2e}".format(iteration+1, cost_msg,time()-st, step)+32*" ", end="", flush=True)
                 self.step_grad_descent(dw, db, step)
-                layers = copy.deepcopy(self._layers)
                 Ydw.append(ydw)
                 Ydb.append(ydb)
                 xdw,xdb = self.get_values()
@@ -174,7 +179,7 @@ class NeuralNet:
                 Xdb.append(xdb)
                 
         except KeyboardInterrupt:
-            print("")
+            print("\nError: {:.6f}".format(best_E))
             self._layers = layers
     
     def learn_old(self, data, labels, iterations=1000000):
