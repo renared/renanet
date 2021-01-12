@@ -15,8 +15,9 @@ import uuid
 import scipy.optimize
 import copy
 from time import time
-import joblib
+import pickle
 import collections
+import matplotlib.pyplot as plt
 
 def mult_rows(A,b):
     return (A.T*b).T
@@ -57,6 +58,14 @@ class NeuralNet:
         assert labels.shape[1:] == (len(self._layers[-1]),)
         return np.sum( (self(data) - labels)**2 )/len(data)/2
     
+    def validate(self,X,C,method='argmax'):
+        '''returns success rate of the perceptron to guess the classes C of data X'''
+        if (len(X)==0): return float("+inf")
+        Y = self(X)
+        M = np.argmax(Y,axis=1)
+        N = np.argmax(C,axis=1)
+        n_good_guesses = np.sum(1*(M==N))
+        return n_good_guesses/len(X)
     
     def grad(self, data, labels):
         N = len(data)
@@ -120,8 +129,7 @@ class NeuralNet:
                    )
         return dw,db
     
-    def learn(self, data, labels, iterations=1000000):
-        ## à coder : mémoire de la meilleure erreur et valeurs
+    def learn(self, data, labels, iterations=1000000, validation_set=([],[])):
         assert type(data) is np.ndarray
         assert data.shape[1:] == (len(self._layers[0]),)
         print("Started learning")
@@ -129,32 +137,39 @@ class NeuralNet:
         layers = copy.deepcopy(self._layers)
         st = time()
         best_E = float("+inf")
+        err_hist = []
+        best_success = 0
         try:
-            Xdw,Xdb = collections.deque(maxlen=2),collections.deque(maxlen=2)
-            Ydw,Ydb = collections.deque(maxlen=1),collections.deque(maxlen=1)
             w,b=self.get_values()
-            Xdw.append(w)
-            Xdb.append(b)
-            Ydw.append(w)
-            Ydb.append(b)
             layers = []
             for iteration in range(iterations):
-                cost_msg = self.cost(data,labels)
-                if cost_msg<=best_E:
-                    best_E=cost_msg
-                    layers = copy.deepcopy(self._layers)
-                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; setting up momentum".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
                 
-                ydw = []
-                ydb = []
-                for k in range(len(Ydw[-1])):
-                    ydw.append( Xdw[-1][k] + .8*(iteration)/(iteration+3)*(Xdw[-1][k]-Xdw[-2][k]) if iteration>0 else Xdw[-1][k])
-                    ydb.append( Xdb[-1][k] + .8*(iteration)/(iteration+3)*(Xdb[-1][k]-Xdb[-2][k]) if iteration>0 else Xdb[-1][k])
-                self.set_values(ydw,ydb)
-                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing gradient".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
+                # plt.scatter([iteration],[self.validate(data,labels)],c='green')
+                # plt.scatter([iteration],[self.validate(*validation_set)],c='blue')
+                
+                # error
+                err = self.cost(data,labels)
+                err_hist.append(err)
+                
+                # success rates
+                success_train = self.validate(data,labels)
+                success_validate = self.validate(*validation_set)
+                
+                if err<=best_E:
+                    best_E=err
+                    if success_validate==float("+inf"): # revient à dire qu'il n'y a pas de validation set
+                        layers = copy.deepcopy(self._layers)
+                    
+                if success_validate > best_success:
+                    best_success = success_validate
+                    layers = copy.deepcopy(self._layers)
+                    
+                def __msg(text):
+                    print("\rIteration {}: error {:.6f}, train {:.2f}%, validate {:.2f}%; Time elapsed: {:.3f}s; {}".format(iteration+1, err, success_train*100, success_validate*100, time()-st, text)+32*" ", end="", flush=True)
+                
+                __msg("computing gradient")
                 dw,db = self.grad(data,labels)
                 
-                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing optimal step".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)
                 def new_cost(step):
                     shadow = copy.deepcopy(self)
                     shadow.step_grad_descent(dw, db, step)
@@ -162,21 +177,25 @@ class NeuralNet:
                     del shadow
                     return E
             
-                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; computing optimal step".format(iteration+1, cost_msg,time()-st)+32*" ", end="", flush=True)    
-                res = scipy.optimize.minimize_scalar(new_cost,method='brent',options={'maxiter':2})
+                __msg("computing optimal gradient step")
+                res = scipy.optimize.minimize_scalar(new_cost,method='brent',options={'maxiter':16})
                 step = res.x
                 if step<=0:
-                    print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; optimal step is negative, step: {:.2e}".format(iteration+1, cost_msg,time()-st, step)+32*" ", end="", flush=True)
-                    res = scipy.optimize.minimize_scalar(new_cost,bounds=(0,1),method='bounded',options={'maxiter':32})
+                    __msg("optimal gradient step is negative")
+                    res = scipy.optimize.minimize_scalar(new_cost,bounds=(0,1),method='bounded',options={'maxiter':16})
                     step = res.x
-                
-                print("\rIteration {}: error {:.6f}; Time elapsed: {:.3f}s; finishing, step: {:.2e}".format(iteration+1, cost_msg,time()-st, step)+32*" ", end="", flush=True)
+                    
                 self.step_grad_descent(dw, db, step)
-                Ydw.append(ydw)
-                Ydb.append(ydb)
-                xdw,xdb = self.get_values()
-                Xdw.append(xdw)
-                Xdb.append(xdb)
+                    
+                # __msg("computing optimal noise step")
+                dw,db = [np.random.randn(*x.shape) for x in dw], [np.random.randn(*x.shape) for x in db]
+                # res = scipy.optimize.minimize_scalar(new_cost,method='brent',options={'maxiter':16})
+                # step = res.x
+                step=0.015
+                
+                self.step_grad_descent(dw, db, step)
+                
+                __msg("finishing iteration")
                 
         except KeyboardInterrupt:
             print("\nError: {:.6f}".format(best_E))
@@ -237,10 +256,12 @@ class NeuralNet:
         for i in range(1,len(self._layers)):
             arr.append(self._layers[i].weights)
             arr.append(self._layers[i].biases)
-        np.save(filename,arr)
+        pickle.dump( arr, open( filename, "wb" ) )
+        # np.save(filename,arr,allow_pickle=True)
     
     def load(self,filename):
-        arr = np.load(filename,allow_pickle=True)
+        arr = pickle.load( open( filename, "rb" ) )
+        # arr = np.load(filename,allow_pickle=True)
         if len(arr)!=2*(len(self._layers)-1):
             raise Exception("Saved renanet doesn't match dimensions.")
         for i in range(1,len(self._layers)):
